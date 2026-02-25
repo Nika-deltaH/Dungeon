@@ -385,13 +385,21 @@ function roundRect(ctx, x, y, w, h, r, fill) {
 /**
  * 事件監聽
  */
-canvas.addEventListener('mousedown', e => {
+function getGridPos(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    // 畫布可能被縮放（CSS），需換算實際座標
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (clientX - rect.left) * scaleX;
+    const my = (clientY - rect.top) * scaleY;
     const gx = Math.floor((mx - MARGIN) / (TILE_SIZE + MARGIN));
     const gy = Math.floor((my - MARGIN - HEADER_H) / (TILE_SIZE + MARGIN));
+    return { gx, gy };
+}
 
+// ── Mouse ──
+canvas.addEventListener('mousedown', e => {
+    const { gx, gy } = getGridPos(e.clientX, e.clientY);
     if (gx >= 0 && gx < GRID_SIZE && gy >= 0 && gy < GRID_SIZE) {
         dragStart = { x: gx, y: gy, sx: e.clientX, sy: e.clientY };
     }
@@ -408,6 +416,30 @@ window.addEventListener('mouseup', e => {
     }
     dragStart = null;
 });
+
+// ── Touch ──
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault(); // 防止捲動/縮放
+    const t = e.changedTouches[0];
+    const { gx, gy } = getGridPos(t.clientX, t.clientY);
+    if (gx >= 0 && gx < GRID_SIZE && gy >= 0 && gy < GRID_SIZE) {
+        dragStart = { x: gx, y: gy, sx: t.clientX, sy: t.clientY };
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (!dragStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - dragStart.sx;
+    const dy = t.clientY - dragStart.sy;
+
+    if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(dragStart.x, dragStart.y, dx > 0 ? 1 : -1, 0);
+        else tryMove(dragStart.x, dragStart.y, 0, dy > 0 ? 1 : -1);
+    }
+    dragStart = null;
+}, { passive: false });
 
 function toggleSettings() {
     const modal = document.getElementById('settings-modal');
