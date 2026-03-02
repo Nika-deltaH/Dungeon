@@ -153,21 +153,28 @@ function checkInteraction(mover, target) {
         checkKeyPromotion(target);
         return { type: 'V', level: n };
     }
-    // 3. Vn + Mx (x <= n): V 戰勝 M, 原地變 Vn, 尾端生 T(x-1)
+    // 3. Vn + Mx (x <= n): V 戰勝 M, 原地變 Vn, 尾端生 T(x-1) 或 V(x-2)
     if (mover.type === 'V' && target.type === 'M' && x <= n) {
         const enemyLv = target.level;
         target.type = 'V';
         target.level = n;
         target.scale = 1.2;
-        return { type: 'T', level: Math.max(1, enemyLv - 1) };
+        // 80% 產生 Lv-1 寶箱, 20% 出現 Lv-2 村民 (最低等級 1)
+        if (Math.random() < 0.8) {
+            return { type: 'T', level: Math.max(1, enemyLv - 1) };
+        } else {
+            return { type: 'V', level: Math.max(1, enemyLv - 2) };
+        }
     }
-    // 4. Vn + Tx (x <= n): V 收集 T, 原地變 Vn, 尾端生 M(x+1)
+    // 4. Vn + Tx (x <= n): V 收集 T, 原地變 Vn, 尾端生 M(x+1) 或 M(x+2)
     if (mover.type === 'V' && target.type === 'T' && x <= n) {
         addGold(x);
         target.type = 'V';
         target.level = n;
         target.scale = 1.2;
-        return { type: 'M', level: x + 1 };
+        // 80% 產生 Lv+1 怪物, 20% 出現 Lv+2 怪物
+        const nextLv = Math.random() < 0.8 ? x + 1 : x + 2;
+        return { type: 'M', level: nextLv };
     }
     return null;
 }
